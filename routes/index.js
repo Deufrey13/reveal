@@ -5,6 +5,7 @@ const schoolModel = require("../models/schools");
 const studentModel = require("../models/students");
 const fs = require("fs");
 
+
 router.post("/create-batch", async (req, res) => {
   const searchBatch = await BatchModel.findOne({
     year: req.body.year,
@@ -27,6 +28,7 @@ router.post("/create-batch", async (req, res) => {
   if (savedBatch) res.json({ result: true, msg: "Batch cree" });
 });
 
+
 router.get("/delete-pdf", async (req, res) => {
   const path = `./client/public/diploma_student${req.query.studentId}_batch${req.query.batchId}.pdf`;
   if (fs.existsSync(path)) {
@@ -36,10 +38,13 @@ router.get("/delete-pdf", async (req, res) => {
   res.json({ result: false, msg: "File non existant" });
 });
 
+
+// Retourne TOUS les batches d'une School
 router.get("/batch", async (req, res) => {
   const school_batches = await BatchModel.find({
     schoolId: req.query.school_id,
   });
+  console.log('ID : ', req.query.school_id);
   if (school_batches.length === 0 || !school_batches) {
     return res.json({
       success: false,
@@ -48,6 +53,7 @@ router.get("/batch", async (req, res) => {
   }
   return res.json({ success: true, batches: school_batches });
 });
+
 
 router.post("/post-csv-import", async (req, res) => {
   ///// 1 - save diploma in the student document
@@ -110,6 +116,8 @@ router.post("/post-csv-import", async (req, res) => {
   res.json({ success: true });
 });
 
+
+// Retourne tous les batches d'une School pour une année donnée, les batches sont peuplés par les Students
 router.get("/batches-populated", async (req, res) => {
   const batchesOfYearWithStudents = await BatchModel.find({
     schoolId: req.query.schoolId,
@@ -125,6 +133,7 @@ router.get("/batches-populated", async (req, res) => {
   return res.json({ success: true, batchesOfYearWithStudents });
 });
 
+
 router.get("/get-school", async (req, res) => {
   const searchSchool = await schoolModel.findById(req.query.school_id);
   if (!searchSchool) {
@@ -133,6 +142,7 @@ router.get("/get-school", async (req, res) => {
     res.json({ result: true, school: searchSchool });
   }
 });
+
 
 router.post("/update-student", async (req, res) => {
   const {
@@ -168,18 +178,27 @@ router.post("/update-student", async (req, res) => {
   res.json({ result: true });
 });
 
+
 router.get("/get-student", async (req, res) => {
-  const name = req.query.student_name.split('-')
-  const searchStudent = await studentModel.findOne({firstname: name[0], lastname: name[1]})
+  // Sépare les nom et prénom fournis car ils sont dans une même string
+  const name = req.query.student_name.split('-');
+
+  const searchStudent = await studentModel.findOne({firstname: name[0], lastname: name[1]});
+
   if (!searchStudent) return res.json({ result: false, msg: "Etudiant non existant" });
   res.json({ result: true, student: searchStudent });
 })
 
+
 router.get("/get-batch", async (req, res) => {
+  // Sépare les curriculum et l'année fournis car ils sont dans une même string
   const batch = req.query.batch_curriculum_year.split('-')
+
   const searchBatch = await BatchModel.findOne({curriculum: batch[0], year: batch[1]});
+
   if (!searchBatch) return res.json({ result: false, msg: "Batch non existant" });
   res.json({ result: true, batch: searchBatch });
 })
+
 
 module.exports = router;

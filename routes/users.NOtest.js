@@ -11,10 +11,11 @@ beforeAll(async () => {
     useUnifiedTopology: true
   });
   db = await connection.db();
+  
 });
 
 test("name", async () => {
-  const response = await request(app).post("/users/signin");
+  const response = await request(app).post("/users/sign-in");
   expect(response.statusCode).toBe(200);
 })
 

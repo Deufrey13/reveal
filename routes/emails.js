@@ -8,6 +8,7 @@ const smartContractGenerator = require('../helpers/smartContractGenerator');
 const BatchModel = require("../models/batches");
 
 
+// Configuration de nbodemailer
 let transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -17,6 +18,7 @@ let transporter = nodemailer.createTransport({
 })
 
 
+// Fonction d'envoi des emails (utile dans plusieurs routes)
 const sendMail = (templatePath, matchings, options, errors) => {
   ejs.renderFile(templatePath, matchings, function (err, data) {
     if (err) {
@@ -49,8 +51,9 @@ router.post("/confirmation", async (req, res) => {
   let errors = []
 
   for (const diplomaData of diplomasData) {
-    //console.log('STudent: ', diplomaData)
+    //console.log('Student: ', diplomaData)
 
+    // préparation des arguments de sendMail()
     const options = {
       to: diplomaData.email,
       subject: 'Informations importantes pour votre DIPLOME',
@@ -66,12 +69,14 @@ router.post("/confirmation", async (req, res) => {
       errorLink: `${process.env.DOMAIN_NAME}/diploma-error/${diplomaData.studentId}/${diplomaData.diplomaId}`
     }
 
+    // Envoi de l'email + gestion eventuelle erreur
     const err = sendMail('emails/firstEmail.ejs', matchings, options);
     if (err) {
       errors.push(err);
       continue;
     }
 
+    // Mise à jour du Student: actualisation du status du Diploma
     const student = await studentModel.findById(diplomaData.studentId);
     const diplomas = student.diplomas.map(diploma => {
       if (diploma._id == diplomaData.diplomaId){
@@ -89,6 +94,7 @@ router.post("/confirmation", async (req, res) => {
     }
   };
 
+  // réponse de la route en accord avec les éventuelles erreurs
   if (errors.length !== 0){
     return res.json({success: false, message: 'one or more errors occured: ', errors})
   }
@@ -98,10 +104,12 @@ router.post("/confirmation", async (req, res) => {
 
 
 router.get("/validate-diploma", async (req, res) => {
+  // recupération du Student et gestion eventuelle erreur
   const searchStudent = await studentModel.findById(req.query.id_student);
   if (!searchStudent) {
     return res.json({ result: false, msg: "L'étudiant n'existe pas" });
   }
+  // recherche du Diploma et gestion éventuelle erreur
   const searchDiplomaIndex = searchStudent.diplomas.findIndex(
     (diploma) => diploma.id === req.query.id_diploma
   );
@@ -112,13 +120,14 @@ router.get("/validate-diploma", async (req, res) => {
     return res.json({ result: false, msg: "Vous avez déjà validé vos informations. Si vous n'avez pas reçu votre diplôme, vérifiez dans votre dossier spam." });
   }
 
+  // Mise à jour du status du Diploma + génération du smartContract
   searchStudent.diplomas[searchDiplomaIndex].status = "confirmé";
   const smartContractUrl = await smartContractGenerator(searchStudent.diplomas[searchDiplomaIndex]._id.toString());
   searchStudent.diplomas[searchDiplomaIndex].url_SmartContract = smartContractUrl;
   await studentModel.findByIdAndUpdate(req.query.id_student, {diplomas: [...searchStudent.diplomas]});
 
-  // envoi email avec les liens vers le diplome pdf et le smartContract
-
+  // envoi email avec les liens vers le diplome pdf et le smartContract:
+  // Préparation des arguments de sendMail() puis envoi
   const batchId = searchStudent.diplomas[searchDiplomaIndex].id_batch;
 
   const options = {
@@ -145,16 +154,18 @@ router.get("/validate-diploma", async (req, res) => {
     console.log('Error: ', err);
   }
 
+  // Réponse de la route
   res.json({ result: true, msg: "Votre diplôme a été validé" });
-  
 });
 
 
 router.get("/error-diploma", async (req, res) => {
+  // recupération du Student et gestion eventuelle erreur
   const searchStudent = await studentModel.findById(req.query.id_student);
   if (!searchStudent) {
     return res.json({ result: false, msg: "L'étudiant n'existe pas" });
   }
+  // recherche du Diploma et gestion éventuelle erreur
   const searchDiplomaIndex = searchStudent.diplomas.findIndex(
     (diploma) => diploma.id === req.query.id_diploma
   );
@@ -165,14 +176,20 @@ router.get("/error-diploma", async (req, res) => {
     return res.json({ result: false, msg: "Vous avez déjà validé vos informations. Contactez votre secrétariat" })
   }
 
+  // Mise à jour du status du Diploma
   searchStudent.diplomas[searchDiplomaIndex].status = "à corriger";
   await studentModel.findByIdAndUpdate(req.query.id_student, {diplomas: [...searchStudent.diplomas]});
+
+  // réponse de la route
   res.json({ result: true, msg: "Veuillez contacter votre secrétariat" });
 });
 
+
 router.post("/demande-inscription", function (req, res) {
+  // Création nouveau User
   const newUser = req.body.values;
 
+  // Préparation des arguments pour sendMail()
   const mailGerant = "frederic.garnier@mycommunicationtoolbox.com"
   
   const options = {
@@ -180,6 +197,7 @@ router.post("/demande-inscription", function (req, res) {
     subject: 'Bonjour Fred, vous avez une nouvelle demande sur Reveal.com',
   }
 
+  // envoi email, et reéponse de la route en accord avec une eventuelle erreur
   const err = sendMail('emails/inscriptionEmail.ejs', newUser, options);
 
   if (err) res.json({result: false, error: `Votre demande n'a pas pu être envoyé, vous pouvez nous contacter à cette adresse: ${mailGerant}`})
@@ -191,5 +209,3 @@ router.post("/demande-inscription", function (req, res) {
 
 module.exports = router;
 
-
-// RESTER A CREER LA ROUTE ET LE MAIL POUR L ENVOI DU DIPLOME + URL SMARTCONTRACT

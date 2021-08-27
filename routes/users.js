@@ -2,17 +2,16 @@ var express = require("express");
 var router = express.Router();
 const SchoolModel = require("../models/schools");
 var mongoose = require("mongoose");
-
-//fred : ajout du require users  dans une const nommee UserModel pour call la db
 const UserModel = require("../models/users");
-
 const bcrypt = require('bcrypt');
 
 
+// Creation d'un nouveau collaborateur d'une School déjà existante
 router.post("/sign-up", async (req, res) => {
+  // 1 - Vérifications et création du User
   const user = { ...req.body };
   if (
-    user.firstname === "" &&
+    user.firstname === "" &&    // Les ET devraient être remplacé par de OU //
     user.email === "" &&
     user.password === "" &&
     user.role === "" &&
@@ -39,15 +38,18 @@ router.post("/sign-up", async (req, res) => {
     return res.json({ result: false, error: "L'utilisateur n'a pas pus être créé" });
   }
 
+  // 2 - Ajout de l'id du nouveau User dans la liste des users de sa School
   school.user_id.push(userSaved._id);
   const schoolSaved = await school.save();
   if(!schoolSaved) {
     return res.json({ result: false, error: "L'utilisateur n'a pas été enregistré dans l'école" });
   };
 
+  // 3 - Réponse de succés de la route, qui renvoie tous les users de la School
   const users = await UserModel.find({school_id: schoolSaved._id});
   res.json({ result: true, users, message: `${userSaved.firstname} a bien été créé` });
 });
+
 
 router.post("/sign-in", async (req, res) => {
   var result = false;
@@ -70,6 +72,7 @@ router.post("/sign-in", async (req, res) => {
   res.json({ result, user, error });
 });
 
+
 router.put("/edit-user/:userId", async (req, res) => {
   const searchUser = await UserModel.findById(req.params.userId);
   if (!searchUser) {
@@ -86,12 +89,15 @@ router.put("/edit-user/:userId", async (req, res) => {
   res.json({ result: true, msg: "User updated" });
 });
 
+
+// renvoie tous les colllaborateurs d'une School donnée
 router.get("/get-collaborators", async (req, res) => {
   const searchCollaborators = await UserModel.find({
     school_id: req.query.school_id,
   });
   res.json({ result: true, collaborators: searchCollaborators });
 });
+
 
 router.get("/get-user", async (req, res) => {
   let searchUser;
@@ -107,8 +113,9 @@ router.get("/get-user", async (req, res) => {
   }
 });
 
+
 router.post("/create-collaborator", async (req, res) => {
-  const searchCollaborator = await UserModel.findOne(req.body);
+  const searchCollaborator = await UserModel.findOne(req.body);     // Il faudrait retirer le password non crypté pour que ça puisse matcher //
   if (searchCollaborator) {
     return res.json({ result: false, msg: "Vous avez déjà ce collaborateur" });
   }
@@ -124,10 +131,13 @@ router.post("/create-collaborator", async (req, res) => {
     school.user_id.push(savedCollaborator._id)
     const schoolSaved = await school.save()
     if(schoolSaved) res.json({ result: true, msg: "User créé" });
-  }
+  }                                                                 // il manque else {} //
 });
 
+
 router.delete("/delete-collaborator/:userId", async (req, res) => {
+  // Il manque des sécurités pour contrôler qui veut supprimer 
+  // Actuellement n'importe qui sur internet peut tenter de supprimer les users en essayant des Id au hasard
   const searchCollaborator = await UserModel.findById(req.params.userId);
   if (!searchCollaborator)
     return res.json({ result: false, msg: "Collaborator non existe" });
@@ -135,6 +145,8 @@ router.delete("/delete-collaborator/:userId", async (req, res) => {
   res.json({ result: true, msg: "Collaborateur supprimé" });
 });
 
+
+// Met à jour les infos d'un user existant
 router.post('/edit/:user_id', async (req, res) => {
   const updatedUser = await UserModel.updateOne(
     { _id: req.params.user_id },
@@ -147,10 +159,11 @@ router.post('/edit/:user_id', async (req, res) => {
   );
   if(updatedUser.n === 0) return res.json({result: false, error: "Un problème est survenu" })
   
-  const user = await UserModel.findById(req.params.user_id)
+  const user = await UserModel.findById(req.params.user_id);  // nécessaire car .updateOne() ne renvoie pas le user
   const users = await UserModel.find({ school_id: user.school_id })
   res.json({result: true, users, message: `${user.firstname} a bien été mis à jour`})
 })
+
 
 router.delete('/delete/:user_id', async (req, res) => {
   const userToDelete = await UserModel.findById(req.params.user_id)
@@ -161,14 +174,13 @@ router.delete('/delete/:user_id', async (req, res) => {
   if(deletedUser.n !== 0){
     school.user_id.splice(idIndex, 1)
     const schoolSaved = await school.save()
-    console.log(`schoolSaved`, schoolSaved)
+    //console.log(`schoolSaved`, schoolSaved)
     const users = await UserModel.find({ school_id: schoolSaved._id })
     res.json({result: true, users, message: `${userToDelete.firstname} a été supprimé`})
   }else{
     res.json({result: false, error: "Un problème est survenu" })
   }
-
-
 })
+
 
 module.exports = router;
