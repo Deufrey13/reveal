@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+// Diploma est un sous-document de student.
 const diplomSchema = new mongoose.Schema({
   url_SmartContract: String,
   mention: String,

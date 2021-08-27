@@ -3,12 +3,16 @@ const router = express.Router();
 const cloudinary = require('cloudinary').v2;
 const SchoolModel = require("../models/schools");
 
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
+
+// Cette fonction enregistre la background image et les éventuelles images des static fields dans cloudinary
+// Elle retourne un object template avec, entre autres, les urls des images enregistrées
 const createTemplate = async (body, school) => {
   const template = {...body.template}
   const saveImgInCloudinary = async (path, name) => {
@@ -28,6 +32,7 @@ const createTemplate = async (body, school) => {
   return template
 }
 
+
 const getSchool = async (res, school_id, callback) => {
   let school
   try {
@@ -38,14 +43,18 @@ const getSchool = async (res, school_id, callback) => {
   }
 }
 
+
 ////// Routes
 
+// Renvoie tous les templates d'une School donnée
 router.get("/get-templates/:school_id", async (req, res) => {
   getSchool(res, req.params.school_id, school => {
     res.json({result:true, templateList: school.templates})
   })
 })
 
+
+// Renvoie le template matchant avec les noms de School et de template donnés
 router.get("/get/:school_id/:template_name", async (req, res) => {
   getSchool(res, req.params.school_id, school => {
     const template = school.templates.find(e=> e.template_name === req.params.template_name)
@@ -57,6 +66,8 @@ router.get("/get/:school_id/:template_name", async (req, res) => {
   })
 })
 
+
+// Créer ou met a jour un template existant
 router.post("/create/:school_id", async function (req, res) {
   getSchool(res, req.params.school_id, async school => {
     const checkName = school.templates.findIndex(e=> e.template_name === req.body.template_name) >= 0
@@ -85,6 +96,7 @@ router.post("/create/:school_id", async function (req, res) {
   })
 });
 
+
 router.delete("/delete/:school_id/:template_name", async (req, res) => {
   getSchool(res, req.params.school_id, school => {
     const templateIndex = school.templates.findIndex(e=> e.template_name === req.params.template_name)
@@ -98,5 +110,6 @@ router.delete("/delete/:school_id/:template_name", async (req, res) => {
     })
   })
 })
+
 
 module.exports = router;

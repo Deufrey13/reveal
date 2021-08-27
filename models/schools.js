@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+// Template est un sous-document de School
 const templateSchema = new mongoose.Schema({
   template_name: {type: String, unique: true, sparse: true, required: true},
   template_dimensions: {type: mongoose.Schema.Types.Mixed},
